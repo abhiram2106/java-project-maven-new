@@ -5,7 +5,7 @@ FROM tomcat:9.0
 RUN rm -rf /usr/local/tomcat/webapps/ROOT
 
 # Copy your WAR file into webapps as ROOT
-COPY myapp.war /usr/local/tomcat/webapps/ROOT.war
+COPY target/myapp.war /usr/local/tomcat/webapps/ROOT.war
 
 # Expose port 8080
 EXPOSE 8080
