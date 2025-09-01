@@ -1,0 +1,34 @@
+pipeline {
+    agent any
+
+    tools {
+        maven 'Maven-3.8.8' // Set Maven version in Jenkins global tools
+    }
+
+    stages {
+        stage('Checkout Code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/abhiram2106/java-project-maven-new.git'
+            }
+        }
+
+        stage('Build with Maven') {
+            steps {
+                sh 'mvn clean package'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh 'docker build -t java-maven-app:v1 .'
+            }
+        }
+
+        stage('Run Docker Container') {
+            steps {
+                sh 'docker run -itd -p 8085:8080 --name java-maven-container java-maven-app:v1 || true'
+            }
+        }
+    }
+}
+
