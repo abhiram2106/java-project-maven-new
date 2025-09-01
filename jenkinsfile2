@@ -1,0 +1,76 @@
+pipeline {
+    agent any
+
+    environment {
+        DOCKERHUB_USER = 'abhiram5673'
+        DOCKERHUB_IMAGE = 'myapp'
+        DOCKERHUB_TAG = 'v1'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git url: 'https://github.com/abhiram2106/java-project-maven-new.git', branch: 'main'
+            }
+        }
+
+        stage('Build with Maven') {
+            steps {
+                sh 'mvn clean package -DskipTests'
+            }
+        }
+
+        stage('Cleanup Old Docker Artifacts') {
+            steps {
+                sh '''
+                echo "🧹 Cleaning up old containers and images..."
+                docker rm -f $(docker ps -aq --filter "name=myapp-cont") || true
+                docker rmi -f ${DOCKERHUB_USER}/${DOCKERHUB_IMAGE}:${DOCKERHUB_TAG} || true
+                '''
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh "docker build -t ${DOCKERHUB_USER}/${DOCKERHUB_IMAGE}:${DOCKERHUB_TAG} ."
+            }
+        }
+
+        stage('Push to DockerHub') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub-creds',
+                                                 usernameVariable: 'DOCKER_USER',
+                                                 passwordVariable: 'DOCKER_PASS')]) {
+                    sh '''
+                    echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+                    docker push ${DOCKERHUB_USER}/${DOCKERHUB_IMAGE}:${DOCKERHUB_TAG}
+                    '''
+                }
+            }
+        }
+
+        stage('Deploy to Docker Swarm') {
+            steps {
+                sh '''
+                echo "🚀 Deploying service to Swarm..."
+                docker service rm myapp-service || true
+                docker service create \
+                    --name myapp-service \
+                    --publish 8082:8080 \
+                    --replicas 2 \
+                    ${DOCKERHUB_USER}/${DOCKERHUB_IMAGE}:${DOCKERHUB_TAG}
+                '''
+            }
+        }
+    }
+
+    post {
+        always {
+            sh '''
+            echo "🧹 Final cleanup..."
+            docker system prune -af || true
+            '''
+        }
+    }
+}
+
