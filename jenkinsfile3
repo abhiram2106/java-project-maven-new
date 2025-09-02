@@ -60,7 +60,7 @@ pipeline {
                     docker service rm myapp-service || true
                     docker service create \
                         --name myapp-service \
-                        --publish 8082:8080 \
+                        --publish 8083:8080 \
                         --replicas 5 \
                         ${DOCKER_HUB_USER}/${IMAGE_NAME}:${IMAGE_TAG}
                     '''
